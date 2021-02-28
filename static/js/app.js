@@ -1,26 +1,37 @@
-
 // initializes the page with a default plot
 function init() {
+    selectPopulate();
     populateDemoInfo(940);
     buildCharts(940);  
 };
 
-// // when a change takes place in the DOM redo the plotly charts
-// d3.selectAll("#selDataset").on("change", buildCharts(getSampleNum));
+function optionChanged(sampleNum) {
+    // when a change takes place in the DOM redo the plotly charts
+    populateDemoInfo(sampleNum);
+    buildCharts(sampleNum); 
+};
 
-// function getSampleNum() {
-//     // Use D3 to select the dropdown menu
-//     var dropdownMenu = d3.select("#selDataset");
-//     // Assign the value of the dropdown menu option to a variable
-//     var dataset = dropdownMenu.property("value");
+// populating the select in the html wit hthe IDs from the dataset
+function selectPopulate() {
+    d3.json("data/samples.json").then((data) => {
+        // creating a variable that holds the samples array. 
+        var names = data.names;
+        // grabbing the html element for use in the loop
+        var selDataset = d3.select("#selDataset");
 
-//     return dataset;
-// };
+        // loop to create the drop down menu
+        names.forEach(name => {
+            selDataset.append("option").text(name).property("value", name);
+        });
+
+    });
+    
+};
 
 function populateDemoInfo(sampleNum) {
 
     d3.json("data/samples.json").then((data) => {
-        // console.log(data);
+        console.log(data);
         // creating a variable that holds the samples array. 
         var metadata = data.metadata;
         // console.log(samples);
@@ -46,28 +57,28 @@ function populateDemoInfo(sampleNum) {
 function buildCharts(sampleNum) {
      // using d3.json to load the samples.json file 
     d3.json("data/samples.json").then((data) => {
-        // console.log(data);
         // creating a variable that holds the samples array. 
         var samples = data.samples;
-        // console.log(samples);
         
         // creating a variable that filters the samples for the object with selected sample #
         var resultArray = samples.filter(sampleObj => sampleObj.id == sampleNum);
         var result = resultArray[0];
 
-        // Slicing the first 10 objects for plotting
-        var slicedSampleValues = result.sample_values.slice(0, 10);
-        // console.log(slicedSampleValues);
-        var slicedOtuIds = result.otu_ids.slice(0, 10);
-        // console.log(slicedOtuIds);
+        // slicing the first 10 objects for plotting
+        var slicedSampleValues = result.sample_values.slice(0, 10).reverse();
+        var slicedBarOtuIds = result.otu_ids.slice(0, 10).map(otuID => `OTU ${otuID}`).reverse()
         var slicedOtuLabels = result.otu_labels.slice(0, 10);
-        // console.log(slicedOtuLabels);
+
+        // creating variables for bubble chart
+        var BubbleSampleValues = result.sample_values;
+        var BubbleOtuIds = result.otu_ids;
+        var BubbleLabels = result.otu_labels;
 
         // creating traces
         // bar
         var barTrace = {
             x: slicedSampleValues,
-            y: slicedOtuIds.map(String),
+            y: slicedBarOtuIds,
             text: slicedOtuLabels,
             name: "Bar Chart",
             type: "bar",
@@ -75,13 +86,14 @@ function buildCharts(sampleNum) {
         };
         // bubble
         var bubbleTrace = {
-            x: slicedOtuIds,
-            y: slicedSampleValues,
-            // text: ['A<br>size: 40', 'B<br>size: 60', 'C<br>size: 80', 'D<br>size: 100'],
+            x: BubbleOtuIds,
+            y: BubbleSampleValues,
+            text: BubbleLabels,
             mode: 'markers',
             marker: {
-                // color: ['rgb(93, 164, 214)', 'rgb(255, 144, 14)',  'rgb(44, 160, 101)', 'rgb(255, 65, 54)'],
-                size: slicedSampleValues
+                color: BubbleOtuIds,
+                size: BubbleSampleValues,
+                colorscale: "Electric"
             }
         };
 
@@ -101,10 +113,9 @@ function buildCharts(sampleNum) {
             title: 'Bubble Chart',
             showlegend: false,
             height: 600,
-            width: 600
+            width: 1000
             };
 
-          
         // creating data's for plotly
         // bar
         var barData = [barTrace];
